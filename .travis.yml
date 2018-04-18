@@ -4,6 +4,9 @@ go:
   - "1.9"
   - "1.10"
 
+services:
+  - memcached
+
 before_install:
   - go get -t -v ./...
 
