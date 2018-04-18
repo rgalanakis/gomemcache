@@ -287,8 +287,7 @@ func (c *Client) getConn(addr net.Addr) (*conn, error) {
 	}
 	cn.extendDeadline()
 	if c.OnConnect != nil {
-		err := c.OnConnect(cn)
-		if err != nil {
+		if err := c.OnConnect(cn); err != nil {
 			return nil, err
 		}
 	}

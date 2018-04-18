@@ -35,3 +35,13 @@ Or run:
 
     $ godoc github.com/bradfitz/gomemcache/memcache
 
+## Testing
+
+You need memcached running. Install it locally, or use Docker: https://hub.docker.com/_/memcached/
+
+    docker run --name my-memcache -d memcached
+
+For auth testing, sign up for an account at https://www.memcachier.com and put the server, username, and host
+into environment variables for GOMEMCACHE_SASL_SERVER, GOMEMCACHE_USERNAME, and GOMEMCACHE_PASSWORD, respectively.
+
+
