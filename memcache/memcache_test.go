@@ -207,6 +207,14 @@ func testWithClient(t *testing.T, c *memcache.Client) {
 		t.Errorf("post-DeleteAll want ErrCacheMiss, got %v", err)
 	}
 
+	// Test TryGet
+
+	// Test CachedGet
+
+	// Test TryDelete
+
+	// Test Lock
+
 }
 
 func testTouchWithClient(t *testing.T, c *memcache.Client) {

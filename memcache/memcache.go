@@ -173,6 +173,12 @@ type Item struct {
 	casid uint64
 }
 
+// NewItem returns a new *memcache.Item initialized with the given values.
+func NewItem(key string, value []byte, expiration int32) *Item {
+	return &Item{Key: key, Value: value, Expiration: expiration}
+}
+
+
 // conn is a connection to a server.
 type conn struct {
 	nc   net.Conn
@@ -336,6 +342,32 @@ func (c *Client) Get(key string) (item *Item, err error) {
 	return
 }
 
+func (c *Client) TryGet(key string) (*Item, error) {
+	item, err := c.Get(key)
+	if err == nil {
+		return item, nil
+	}
+	if err == ErrCacheMiss {
+		return item, nil
+	}
+	return item, err
+}
+
+func (c *Client) CachedGet(key string, ifUncached func() ([]byte, int32)) (*Item, error) {
+	item, err := c.Get(key)
+	if err == nil {
+		return item, nil
+	}
+	if err == ErrCacheMiss {
+		value, exp := ifUncached()
+		item := NewItem(key, value, exp)
+		addErr := c.Add(item)
+		return item, addErr
+	}
+	return item, err
+}
+
+
 // Touch updates the expiry for the given key. The seconds parameter is either
 // a Unix timestamp or, if seconds is less than 1 month, the number of seconds
 // into the future at which time the item will expire. ErrCacheMiss is returned if the
@@ -345,6 +377,21 @@ func (c *Client) Touch(key string, seconds int32) (err error) {
 		return c.touchFromAddr(addr, []string{key}, seconds)
 	})
 }
+
+func (c *Client) Lock(key string, lockExpires int32, ifAcquired func()) (bool, error) {
+	lockKey := "lock." + key
+	addErr := c.Add(NewItem(lockKey, []byte("1"), lockExpires))
+	if addErr == ErrNotStored {
+		return false, nil
+	}
+	if addErr != nil {
+		return false, addErr
+	}
+	ifAcquired()
+	deleteErr := c.TryDelete(lockKey)
+	return true, deleteErr
+}
+
 
 func (c *Client) withKeyAddr(key string, fn func(net.Addr) error) (err error) {
 	if !legalKey(key) {
@@ -645,6 +692,18 @@ func (c *Client) Delete(key string) error {
 		return writeExpectf(rw, resultDeleted, "delete %s\r\n", key)
 	})
 }
+
+func (c *Client) TryDelete(key string) error {
+	err := c.Delete(key)
+	if err == nil {
+		return nil
+	}
+	if err == ErrCacheMiss {
+		return nil
+	}
+	return err
+}
+
 
 // DeleteAll deletes all items in the cache.
 func (c *Client) DeleteAll() error {
