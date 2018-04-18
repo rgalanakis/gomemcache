@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := test
 
 fmt:
-	go fmt
+	go fmt ./...
 
 get:
 	go vet

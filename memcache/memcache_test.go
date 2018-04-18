@@ -19,13 +19,13 @@ package memcache_test
 
 import (
 	"fmt"
+	"github.com/rgalanakis/gomemcache/memcache"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
-	"github.com/rgalanakis/gomemcache/memcache"
 )
 
 const testServer = "localhost:11211"

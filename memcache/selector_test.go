@@ -17,8 +17,8 @@ limitations under the License.
 package memcache_test
 
 import (
-	"testing"
 	"github.com/rgalanakis/gomemcache/memcache"
+	"testing"
 )
 
 func BenchmarkPickServer(b *testing.B) {
