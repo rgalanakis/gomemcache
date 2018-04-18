@@ -115,6 +115,42 @@ var (
 	resultClientErrorPrefix = []byte("CLIENT_ERROR ")
 )
 
+// Interface is a common interface for gomemcache clients.
+// A MockClient is provided that provides memcached-like behavior for single-threaded,
+// in memory purposes like unit testing.
+type Interface interface {
+	// Add writes the given item, if no value already exists for its
+	// key. ErrNotStored is returned if that condition is not met.
+	Add(item *Item) error
+	// Delete deletes the item with the provided key. The error ErrCacheMiss is
+	// returned if the item didn't already exist in the cache.
+	Delete(key string) error
+	// DeleteAll deletes all items in the cache.
+	DeleteAll() error
+	// Get gets the item for the given key. ErrCacheMiss is returned for a
+	// memcache cache miss. The key must be at most 250 bytes in length.
+	Get(key string) (*Item, error)
+	// Replace writes the given item, but only if the server *does*
+	// already hold data for this key
+	Replace(item *Item) error
+	// Set writes the given item, unconditionally.
+	Set(item *Item) error
+
+	// Increment atomically increments key by delta. The return value is
+	// the new value after being incremented or an error. If the value
+	// didn't exist in memcached the error is ErrCacheMiss. The value in
+	// memcached must be an decimal number, or an error will be returned.
+	// On 64-bit overflow, the new value wraps around.
+	Increment(key string, delta uint64) (newValue uint64, err error)
+	// Decrement atomically decrements key by delta. The return value is
+	// the new value after being decremented or an error. If the value
+	// didn't exist in memcached the error is ErrCacheMiss. The value in
+	// memcached must be an decimal number, or an error will be returned.
+	// On underflow, the new value is capped at zero and does not wrap
+	// around.
+	Decrement(key string, delta uint64) (newValue uint64, err error)
+}
+
 // New returns a memcache client using the provided server(s)
 // with equal weight. If a server is listed multiple times,
 // it gets a proportional amount of weight.
@@ -150,6 +186,11 @@ type Client struct {
 
 	lk       sync.Mutex
 	freeconn map[string][]*conn
+}
+
+// NewItem returns a new *memcache.Item initialized with the given values.
+func NewItem(key string, value []byte, expiration int32) *Item {
+	return &Item{Key: key, Value: value, Expiration: expiration}
 }
 
 // Item is an item to be got or stored in a memcached server.
@@ -324,8 +365,6 @@ func (c *Client) FlushAll() error {
 	return c.selector.Each(c.flushAllFromAddr)
 }
 
-// Get gets the item for the given key. ErrCacheMiss is returned for a
-// memcache cache miss. The key must be at most 250 bytes in length.
 func (c *Client) Get(key string) (item *Item, err error) {
 	err = c.withKeyAddr(key, func(addr net.Addr) error {
 		return c.getFromAddr(addr, []string{key}, func(it *Item) { item = it })
@@ -530,8 +569,6 @@ func (c *Client) set(rw *bufio.ReadWriter, item *Item) error {
 	return c.populateOne(rw, "set", item)
 }
 
-// Add writes the given item, if no value already exists for its
-// key. ErrNotStored is returned if that condition is not met.
 func (c *Client) Add(item *Item) error {
 	return c.onItem(item, (*Client).add)
 }
@@ -540,8 +577,6 @@ func (c *Client) add(rw *bufio.ReadWriter, item *Item) error {
 	return c.populateOne(rw, "add", item)
 }
 
-// Replace writes the given item, but only if the server *does*
-// already hold data for this key
 func (c *Client) Replace(item *Item) error {
 	return c.onItem(item, (*Client).replace)
 }
@@ -638,36 +673,22 @@ func writeExpectf(rw *bufio.ReadWriter, expect []byte, format string, args ...in
 	return fmt.Errorf("memcache: unexpected response line: %q", string(line))
 }
 
-// Delete deletes the item with the provided key. The error ErrCacheMiss is
-// returned if the item didn't already exist in the cache.
 func (c *Client) Delete(key string) error {
 	return c.withKeyRw(key, func(rw *bufio.ReadWriter) error {
 		return writeExpectf(rw, resultDeleted, "delete %s\r\n", key)
 	})
 }
 
-// DeleteAll deletes all items in the cache.
 func (c *Client) DeleteAll() error {
 	return c.withKeyRw("", func(rw *bufio.ReadWriter) error {
 		return writeExpectf(rw, resultDeleted, "flush_all\r\n")
 	})
 }
 
-// Increment atomically increments key by delta. The return value is
-// the new value after being incremented or an error. If the value
-// didn't exist in memcached the error is ErrCacheMiss. The value in
-// memcached must be an decimal number, or an error will be returned.
-// On 64-bit overflow, the new value wraps around.
 func (c *Client) Increment(key string, delta uint64) (newValue uint64, err error) {
 	return c.incrDecr("incr", key, delta)
 }
 
-// Decrement atomically decrements key by delta. The return value is
-// the new value after being decremented or an error. If the value
-// didn't exist in memcached the error is ErrCacheMiss. The value in
-// memcached must be an decimal number, or an error will be returned.
-// On underflow, the new value is capped at zero and does not wrap
-// around.
 func (c *Client) Decrement(key string, delta uint64) (newValue uint64, err error) {
 	return c.incrDecr("decr", key, delta)
 }
