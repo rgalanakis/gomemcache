@@ -1,3 +1,9 @@
+[![Build Status](https://travis-ci.org/rgalanakis/gomemcache.svg?branch=master)](https://travis-ci.org/rgalanakis/gomemcache)
+[![codecov](https://codecov.io/gh/rgalanakis/gomemcache/branch/master/graph/badge.svg)](https://codecov.io/gh/rgalanakis/gomemcache)
+
+[![GoDoc](https://godoc.org/github.com/rgalanakis/gomemcache?status.svg)](http://godoc.org/github.com/rgalanakis/gomemcache)
+[![license](http://img.shields.io/badge/license-MIT-orange.svg)](https://raw.githubusercontent.com/rgalanakis/gomemcache/master/LICENSE)
+
 ## About
 
 This is a memcache client library for the Go programming language
