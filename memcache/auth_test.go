@@ -25,28 +25,34 @@ import (
 	"time"
 )
 
-var (
-	testServerWithAuth = os.Getenv("GOMEMCACHE_SASL_SERVER")
-	testServerUsername = os.Getenv("GOMEMCACHE_USERNAME")
-	testServerPass     = os.Getenv("GOMEMCACHE_PASSWORD")
+const (
+	saslServerKey = "GOMEMCACHE_SASL_SERVER"
+	usernameKey = "GOMEMCACHE_USERNAME"
+	passwordKey = "GOMEMCACHE_PASSWORD"
 )
 
 func TestAuth(t *testing.T) {
-	if testServerWithAuth == "" || testServerUsername == "" || testServerPass == "" {
+	saslServer := os.Getenv(saslServerKey)
+	username := os.Getenv(usernameKey)
+	password := os.Getenv(passwordKey)
+	if saslServer == "" || username == "" || password == "" {
 		t.Errorf(
-			"Auth test environment not setup properly. Server %d chars, User %d chars, Pass %d chars",
-			len(testServerWithAuth),
-			len(testServerUsername),
-			len(testServerPass))
+			"Auth envvars not present.\n%s: %d chars, %s: %d chars, %s: %d chars",
+			saslServerKey,
+			len(saslServer),
+			usernameKey,
+			len(username),
+			passwordKey,
+			len(password))
 	}
-	_, err := net.Dial("tcp", testServerWithAuth)
+	_, err := net.Dial("tcp", saslServer)
 	if err != nil {
 		t.Errorf("Failed to dial %s: %v", testServer, err)
 	}
 
-	cl := memcache.New(testServerWithAuth)
+	cl := memcache.New(saslServer)
 	cl.Timeout = 5 * time.Second
-	cl.SetAuthentication(testServerUsername, []byte(testServerPass))
+	cl.SetAuthentication(username, []byte(password))
 	_, err = cl.Get("tester")
 	if err != nil && err != memcache.ErrCacheMiss {
 		t.Errorf("Failed to get/connect: %v", err)
