@@ -2,7 +2,7 @@
 [![codecov](https://codecov.io/gh/rgalanakis/gomemcache/branch/master/graph/badge.svg)](https://codecov.io/gh/rgalanakis/gomemcache)
 
 [![GoDoc](https://godoc.org/github.com/rgalanakis/gomemcache?status.svg)](http://godoc.org/github.com/rgalanakis/gomemcache)
-[![license](http://img.shields.io/badge/license-MIT-orange.svg)](https://raw.githubusercontent.com/rgalanakis/gomemcache/master/LICENSE)
+[![license](http://img.shields.io/badge/license-Apache2.0-orange.svg)](https://raw.githubusercontent.com/rgalanakis/gomemcache/master/LICENSE)
 
 ## About
 
