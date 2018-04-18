@@ -15,19 +15,17 @@ limitations under the License.
 */
 
 // Package memcache provides a client for the memcached cache server.
-package memcache
+package memcache_test
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
+	"github.com/rgalanakis/gomemcache/memcache"
 )
 
 const testServer = "localhost:11211"
@@ -46,7 +44,7 @@ func TestLocalhost(t *testing.T) {
 	if !setup(t) {
 		return
 	}
-	testWithClient(t, New(testServer))
+	testWithClient(t, memcache.New(testServer))
 }
 
 // Run the memcached binary as a child process and connect to its unix socket.
@@ -68,18 +66,18 @@ func TestUnixSocket(t *testing.T) {
 		time.Sleep(time.Duration(25*i) * time.Millisecond)
 	}
 
-	testWithClient(t, New(sock))
+	testWithClient(t, memcache.New(sock))
 }
 
-func mustSetF(t *testing.T, c *Client) func(*Item) {
-	return func(it *Item) {
+func mustSetF(t *testing.T, c *memcache.Client) func(*memcache.Item) {
+	return func(it *memcache.Item) {
 		if err := c.Set(it); err != nil {
 			t.Fatalf("failed to Set %#v: %v", *it, err)
 		}
 	}
 }
 
-func testWithClient(t *testing.T, c *Client) {
+func testWithClient(t *testing.T, c *memcache.Client) {
 	checkErr := func(err error, format string, args ...interface{}) {
 		if err != nil {
 			t.Fatalf(format, args...)
@@ -88,7 +86,7 @@ func testWithClient(t *testing.T, c *Client) {
 	mustSet := mustSetF(t, c)
 
 	// Set
-	foo := &Item{Key: "foo", Value: []byte("fooval"), Flags: 123}
+	foo := &memcache.Item{Key: "foo", Value: []byte("fooval"), Flags: 123}
 	err := c.Set(foo)
 	checkErr(err, "first set(foo): %v", err)
 	err = c.Set(foo)
@@ -109,7 +107,7 @@ func testWithClient(t *testing.T, c *Client) {
 
 	// Get and set a unicode key
 	quxKey := "Hello_世界"
-	qux := &Item{Key: quxKey, Value: []byte("hello world")}
+	qux := &memcache.Item{Key: quxKey, Value: []byte("hello world")}
 	err = c.Set(qux)
 	checkErr(err, "first set(Hello_世界): %v", err)
 	it, err = c.Get(quxKey)
@@ -122,28 +120,28 @@ func testWithClient(t *testing.T, c *Client) {
 	}
 
 	// Set malformed keys
-	malFormed := &Item{Key: "foo bar", Value: []byte("foobarval")}
+	malFormed := &memcache.Item{Key: "foo bar", Value: []byte("foobarval")}
 	err = c.Set(malFormed)
-	if err != ErrMalformedKey {
+	if err != memcache.ErrMalformedKey {
 		t.Errorf("set(foo bar) should return ErrMalformedKey instead of %v", err)
 	}
-	malFormed = &Item{Key: "foo" + string(0x7f), Value: []byte("foobarval")}
+	malFormed = &memcache.Item{Key: "foo" + string(0x7f), Value: []byte("foobarval")}
 	err = c.Set(malFormed)
-	if err != ErrMalformedKey {
+	if err != memcache.ErrMalformedKey {
 		t.Errorf("set(foo<0x7f>) should return ErrMalformedKey instead of %v", err)
 	}
 
 	// Add
-	bar := &Item{Key: "bar", Value: []byte("barval")}
+	bar := &memcache.Item{Key: "bar", Value: []byte("barval")}
 	err = c.Add(bar)
 	checkErr(err, "first add(foo): %v", err)
-	if err := c.Add(bar); err != ErrNotStored {
+	if err := c.Add(bar); err != memcache.ErrNotStored {
 		t.Fatalf("second add(foo) want ErrNotStored, got %v", err)
 	}
 
 	// Replace
-	baz := &Item{Key: "baz", Value: []byte("bazvalue")}
-	if err := c.Replace(baz); err != ErrNotStored {
+	baz := &memcache.Item{Key: "baz", Value: []byte("bazvalue")}
+	if err := c.Replace(baz); err != memcache.ErrNotStored {
 		t.Fatalf("expected replace(baz) to return ErrNotStored, got %v", err)
 	}
 	err = c.Replace(bar)
@@ -172,12 +170,12 @@ func testWithClient(t *testing.T, c *Client) {
 	err = c.Delete("foo")
 	checkErr(err, "Delete: %v", err)
 	it, err = c.Get("foo")
-	if err != ErrCacheMiss {
+	if err != memcache.ErrCacheMiss {
 		t.Errorf("post-Delete want ErrCacheMiss, got %v", err)
 	}
 
 	// Incr/Decr
-	mustSet(&Item{Key: "num", Value: []byte("42")})
+	mustSet(&memcache.Item{Key: "num", Value: []byte("42")})
 	n, err := c.Increment("num", 8)
 	checkErr(err, "Increment num + 8: %v", err)
 	if n != 50 {
@@ -191,10 +189,10 @@ func testWithClient(t *testing.T, c *Client) {
 	err = c.Delete("num")
 	checkErr(err, "delete num: %v", err)
 	n, err = c.Increment("num", 1)
-	if err != ErrCacheMiss {
+	if err != memcache.ErrCacheMiss {
 		t.Fatalf("increment post-delete: want ErrCacheMiss, got %v", err)
 	}
-	mustSet(&Item{Key: "num", Value: []byte("not-numeric")})
+	mustSet(&memcache.Item{Key: "num", Value: []byte("not-numeric")})
 	n, err = c.Increment("num", 1)
 	if err == nil || !strings.Contains(err.Error(), "client error") {
 		t.Fatalf("increment non-number: want client error, got %v", err)
@@ -205,13 +203,13 @@ func testWithClient(t *testing.T, c *Client) {
 	err = c.DeleteAll()
 	checkErr(err, "DeleteAll: %v", err)
 	it, err = c.Get("bar")
-	if err != ErrCacheMiss {
+	if err != memcache.ErrCacheMiss {
 		t.Errorf("post-DeleteAll want ErrCacheMiss, got %v", err)
 	}
 
 }
 
-func testTouchWithClient(t *testing.T, c *Client) {
+func testTouchWithClient(t *testing.T, c *memcache.Client) {
 	if testing.Short() {
 		t.Log("Skipping testing memcache Touch with testing in Short mode")
 		return
@@ -224,8 +222,8 @@ func testTouchWithClient(t *testing.T, c *Client) {
 	// We will set foo and bar to expire in 2 seconds, then we'll keep touching
 	// foo every second
 	// After 3 seconds, we expect foo to be available, and bar to be expired
-	foo := &Item{Key: "foo", Value: []byte("fooval"), Expiration: secondsToExpiry}
-	bar := &Item{Key: "bar", Value: []byte("barval"), Expiration: secondsToExpiry}
+	foo := &memcache.Item{Key: "foo", Value: []byte("fooval"), Expiration: secondsToExpiry}
+	bar := &memcache.Item{Key: "bar", Value: []byte("barval"), Expiration: secondsToExpiry}
 
 	setTime := time.Now()
 	mustSet(foo)
@@ -241,7 +239,7 @@ func testTouchWithClient(t *testing.T, c *Client) {
 
 	_, err := c.Get("foo")
 	if err != nil {
-		if err == ErrCacheMiss {
+		if err == memcache.ErrCacheMiss {
 			t.Fatalf("touching failed to keep item foo alive")
 		} else {
 			t.Fatalf("unexpected error retrieving foo after touching: %v", err.Error())
@@ -252,38 +250,8 @@ func testTouchWithClient(t *testing.T, c *Client) {
 	if nil == err {
 		t.Fatalf("item bar did not expire within %v seconds", time.Now().Sub(setTime).Seconds())
 	} else {
-		if err != ErrCacheMiss {
+		if err != memcache.ErrCacheMiss {
 			t.Fatalf("unexpected error retrieving bar: %v", err.Error())
 		}
-	}
-}
-
-func BenchmarkOnItem(b *testing.B) {
-	fakeServer, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		b.Fatal("Could not open fake server: ", err)
-	}
-	defer fakeServer.Close()
-	go func() {
-		for {
-			if c, err := fakeServer.Accept(); err == nil {
-				go func() { io.Copy(ioutil.Discard, c) }()
-			} else {
-				return
-			}
-		}
-	}()
-
-	addr := fakeServer.Addr()
-	c := New(addr.String())
-	if _, err := c.getConn(addr); err != nil {
-		b.Fatal("failed to initialize connection to fake server")
-	}
-
-	item := Item{Key: "foo"}
-	dummyFn := func(_ *Client, _ *bufio.ReadWriter, _ *Item) error { return nil }
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		c.onItem(&item, dummyFn)
 	}
 }

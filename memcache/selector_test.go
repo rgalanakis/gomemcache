@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package memcache
+package memcache_test
 
-import "testing"
+import (
+	"testing"
+	"github.com/rgalanakis/gomemcache/memcache"
+)
 
 func BenchmarkPickServer(b *testing.B) {
 	// at least two to avoid 0 and 1 special cases:
@@ -29,7 +32,7 @@ func BenchmarkPickServer_Single(b *testing.B) {
 
 func benchPickServer(b *testing.B, servers ...string) {
 	b.ReportAllocs()
-	var ss ServerList
+	var ss memcache.ServerList
 	ss.SetServers(servers...)
 	for i := 0; i < b.N; i++ {
 		if _, err := ss.PickServer("some key"); err != nil {
