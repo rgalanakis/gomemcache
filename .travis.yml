@@ -1,0 +1,17 @@
+language: go
+
+go:
+  - "1.9"
+  - "1.10"
+
+before_install:
+  - go get -t -v ./...
+
+install:
+  - make setup
+
+script:
+  - make coverage
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
