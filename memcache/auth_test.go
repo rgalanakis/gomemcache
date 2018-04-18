@@ -18,22 +18,22 @@ limitations under the License.
 package memcache_test
 
 import (
-	"net"
-	"testing"
 	"github.com/rgalanakis/gomemcache/memcache"
-	"time"
+	"net"
 	"os"
+	"testing"
+	"time"
 )
 
 var (
 	testServerWithAuth = os.Getenv("GOMEMCACHE_SASL_SERVER")
 	testServerUsername = os.Getenv("GOMEMCACHE_USERNAME")
-	testServerPass = os.Getenv("GOMEMCACHE_PASSWORD")
+	testServerPass     = os.Getenv("GOMEMCACHE_PASSWORD")
 )
 
 func TestAuth(t *testing.T) {
 	if testServerWithAuth == "" || testServerUsername == "" || testServerPass == "" {
-		t.Errorf("Auth test environment not setup properly.")
+		t.Errorf("Auth test environment not setup properly. Server '%s', User '%s'", testServerWithAuth, testServerUsername)
 	}
 	_, err := net.Dial("tcp", testServerWithAuth)
 	if err != nil {
