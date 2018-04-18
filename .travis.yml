@@ -10,9 +10,6 @@ services:
 before_install:
   - go get -t -v ./...
 
-install:
-  - make setup
-
 script:
   - make coverage
 

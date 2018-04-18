@@ -3,7 +3,7 @@
 fmt:
 	go fmt ./...
 
-get:
+vet:
 	go vet
 
 test:
