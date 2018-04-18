@@ -33,7 +33,11 @@ var (
 
 func TestAuth(t *testing.T) {
 	if testServerWithAuth == "" || testServerUsername == "" || testServerPass == "" {
-		t.Errorf("Auth test environment not setup properly. Server '%s', User '%s'", testServerWithAuth, testServerUsername)
+		t.Errorf(
+			"Auth test environment not setup properly. Server %d chars, User %d chars, Pass %d chars",
+			len(testServerWithAuth),
+			len(testServerUsername),
+			len(testServerPass))
 	}
 	_, err := net.Dial("tcp", testServerWithAuth)
 	if err != nil {
